@@ -41,7 +41,17 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         public void Bind(EntityInfo entityInfo)
         {
             _entityInfo = entityInfo;
-            Selection.activeObject = entityInfo != null ? this : null;
+            if (entityInfo != null)
+            {
+                Selection.activeObject = this;
+                var inspectorWindowType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+                var inspectorWindow = EditorWindow.GetWindow(inspectorWindowType);
+                inspectorWindow.Focus();
+            }
+            else
+            {
+                Selection.activeObject = null;
+            }
         }
 
         /// <summary>
@@ -63,7 +73,7 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
                 var style = new GUIStyle(EditorStyles.boldLabel);
                 style.fontSize = 24;
                 style.padding = new RectOffset(8, 8, 8, 8);
-                GUILayout.Label($"Entity({_inspector._entityInfo.EntityId})", style);
+                GUILayout.Label($"Entity_{_inspector._entityInfo.EntityId}", style);
             }
 
             /// <summary>

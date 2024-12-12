@@ -29,5 +29,5 @@ public class MainCompositionRoot : ICompositionRoot
 }
 ```
 
-Window -> Svelto.ECS -> Unity EntitiesHierarchy<br>
+Window -> Svelto.ECS -> EntitiesHierarchy<br>
 <img width="800" src="./image.png">
