@@ -1,0 +1,17 @@
+{
+    "name": "SveltoECS.Unity.EntityVisualize",
+    "rootNamespace": "",
+    "references": [
+        "GUID:1869b46461d119144a089fe5899ab312",
+        "GUID:5a11e54a3889e4e13838bc2f16225717"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
