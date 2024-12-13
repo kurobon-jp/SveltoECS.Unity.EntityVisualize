@@ -9,7 +9,7 @@ namespace SveltoECS.Unity.EntityVisualize
     /// </summary>
     public static class EntityVisualizer
     {
-        public static Dictionary<string, EnginesRoot> EnginesRoots { get; } = new();
+        internal static Dictionary<string, EnginesRoot> EnginesRoots { get; } = new();
         
         /// <summary>
         /// Registers the name

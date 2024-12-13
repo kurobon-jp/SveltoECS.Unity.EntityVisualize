@@ -18,7 +18,7 @@ namespace SveltoECS.Unity.EntityVisualize.Models
         /// <summary>
         /// Gets or sets the value of the component
         /// </summary>
-        public object Component { get; set; }
+        public object Component { get; }
 
         /// <summary>
         /// Gets or sets the value of the foldout
@@ -30,10 +30,11 @@ namespace SveltoECS.Unity.EntityVisualize.Models
         /// </summary>
         /// <param name="componentId">The component id</param>
         /// <param name="componentName">The component name</param>
-        public ComponentInfo(uint componentId, string componentName)
+        public ComponentInfo(uint componentId, string componentName, object component)
         {
             ComponentId = componentId;
             ComponentName = componentName;
+            Component = component;
         }
 
         /// <summary>

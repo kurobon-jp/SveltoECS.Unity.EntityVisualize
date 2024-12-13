@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Svelto.ECS;
 
 namespace SveltoECS.Unity.EntityVisualize.Models
 {
@@ -10,7 +11,7 @@ namespace SveltoECS.Unity.EntityVisualize.Models
         /// <summary>
         /// Gets the value of the entity id
         /// </summary>
-        public uint EntityId { get; }
+        public EGID EGID { get; }
 
         /// <summary>
         /// Gets the value of the components
@@ -18,38 +19,12 @@ namespace SveltoECS.Unity.EntityVisualize.Models
         public List<ComponentInfo> Components { get; } = new();
 
         /// <summary>
-        /// Gets or sets the value of the last tick
+        /// Initializes a new instance of the <see cref="EGID"/> class
         /// </summary>
-        public int LastTick { get; set; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EntityInfo"/> class
-        /// </summary>
-        /// <param name="entityId">The entity id</param>
-        public EntityInfo(uint entityId)
+        /// <param name="egid">The entity group id</param>
+        public EntityInfo(EGID egid)
         {
-            EntityId = entityId;
-        }
-
-        /// <summary>
-        /// Describes whether this instance try get
-        /// </summary>
-        /// <param name="key">The key</param>
-        /// <param name="value">The value</param>
-        /// <returns>The bool</returns>
-        public bool TryGet(uint key, out ComponentInfo value)
-        {
-            value = null;
-            foreach (var componentInfo in Components)
-            {
-                if (componentInfo.ComponentId == key)
-                {
-                    value = componentInfo;
-                    return true;
-                }
-            }
-
-            return false;
+            EGID = egid;
         }
 
         /// <summary>
@@ -59,7 +34,6 @@ namespace SveltoECS.Unity.EntityVisualize.Models
         public void Add(ComponentInfo value)
         {
             Components.Add(value);
-            Components.Sort((a, b) => (int)(a.ComponentId - b.ComponentId));
         }
 
         /// <summary>
@@ -68,7 +42,7 @@ namespace SveltoECS.Unity.EntityVisualize.Models
         /// <returns>The string</returns>
         public override string ToString()
         {
-            return $"Entity_{EntityId.ToString()}";
+            return $"Entity id:{EGID.entityID}";
         }
     }
 }

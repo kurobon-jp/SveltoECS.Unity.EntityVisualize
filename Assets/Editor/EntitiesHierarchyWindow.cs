@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using SveltoECS.Unity.EntityVisualize.Models;
+using Svelto.DataStructures;
+using Svelto.ECS;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -41,7 +42,7 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         /// <summary>
         /// The ticker
         /// </summary>
-        private EnginesRootTicker _ticker;
+        private EntityCollector _collector;
 
         /// <summary>
         /// Opens
@@ -79,20 +80,19 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
                 var selectedIndex = EditorGUILayout.IntPopup(_selectedIndex, names, indexies, EditorStyles.toolbarPopup,
                     GUILayout.Width(150f));
                 if (selectedIndex < 0) return;
-                if (selectedIndex != _selectedIndex || _ticker == null)
+                if (selectedIndex != _selectedIndex || _collector == null)
                 {
-                    _ticker ??= new EnginesRootTicker();
+                    _collector ??= new EntityCollector();
                     _treeViewState.selectedIDs = new List<int>();
-                    _treeView.OnEntitySelected(null);
+                    _treeView.OnEntitySelected(default);
                     if (enginesRoots.TryGetValue(names[_selectedIndex], out var enginesRoot))
                     {
                         _selectedIndex = selectedIndex;
-                        _ticker.Bind(enginesRoot);
+                        _collector.Bind(enginesRoot);
                     }
                 }
 
-                _ticker.Tick();
-                _treeView.Bind(_ticker.EnginesRootInfo);
+                _treeView.Bind(_collector);
                 _treeView.Reload();
                 _treeView.OnGUI(GetContentArea());
             }
@@ -125,10 +125,18 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         class EntitiesTreeView : TreeView
         {
             /// <summary>
+            /// The collector
+            /// </summary>
+            private EntityCollector _collector;
+
+            /// <summary>
             /// The engines root
             /// </summary>
-            private EnginesRootInfo _enginesRoot;
+            private IReadOnlyDictionary<ExclusiveGroupStruct, FasterList<EGID>> _groups;
 
+            /// <summary>
+            /// The item cache
+            /// </summary>
             private readonly List<object> _itemCache = new();
 
             /// <summary>
@@ -140,12 +148,12 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             }
 
             /// <summary>
-            /// Binds the engines root
+            /// Binds the collector
             /// </summary>
-            /// <param name="enginesRoot">The engines root</param>
-            public void Bind(EnginesRootInfo enginesRoot)
+            /// <param name="collector">The collector</param>
+            public void Bind(EntityCollector collector)
             {
-                _enginesRoot = enginesRoot;
+                _collector = collector;
             }
 
             /// <summary>
@@ -158,19 +166,26 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
                 {
                     if (selectedId >= _itemCache.Count) continue;
                     var item = _itemCache[selectedId];
-                    if (item is not EntityInfo entity) continue;
-                    OnEntitySelected(entity);
+                    if (item is not EGID egid) continue;
+                    OnEntitySelected(egid);
                     return;
                 }
             }
 
             /// <summary>
-            /// Ons the entity selected using the specified entity
+            /// Ons the entity selected using the specified egid
             /// </summary>
-            /// <param name="entity">The entity</param>
-            public void OnEntitySelected(EntityInfo entity)
+            /// <param name="egid">The egid</param>
+            public void OnEntitySelected(EGID egid)
             {
-                EntityInspector.Instance.Bind(entity);
+                if (egid == default)
+                {
+                    EntityInspector.Instance.Bind(null);
+                    return;
+                }
+
+                var entityInfo = _collector.GetEntityInfo(egid);
+                EntityInspector.Instance.Bind(entityInfo);
             }
 
             /// <summary>
@@ -179,23 +194,26 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             /// <returns>The root</returns>
             protected override TreeViewItem BuildRoot()
             {
+                _groups = _collector.CollectGroups();
                 _itemCache.Clear();
                 var root = new TreeViewItem
                 {
                     id = 0, depth = -1, displayName = "Root",
                     children = new List<TreeViewItem>()
                 };
-                foreach (var group in _enginesRoot.Groups)
+                foreach (var group in _groups)
                 {
-                    var item = CreateEntityGroupItem(group);
-                    _itemCache.Add(group);
-                    foreach (var entity in group.Entities)
+                    var groupItem = new TreeViewItem
+                        { id = _itemCache.Count, depth = 0, displayName = group.Key.ToString() };
+                    _itemCache.Add(group.Key);
+                    foreach (var egid in group.Value)
                     {
-                        item.AddChild(CreateEntityItem(entity));
-                        _itemCache.Add(entity);
+                        _itemCache.Add(egid);
+                        groupItem.AddChild(new TreeViewItem
+                            { id = _itemCache.Count, depth = 1, displayName = egid.ToString() });
                     }
 
-                    root.AddChild(item);
+                    root.AddChild(groupItem);
                 }
 
                 SetupDepthsFromParentsAndChildren(root);
@@ -203,38 +221,24 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             }
 
             /// <summary>
-            /// Creates the entity group item using the specified group
+            /// Describes whether this instance does item match search
             /// </summary>
-            /// <param name="group">The group</param>
-            /// <returns>The tree view item</returns>
-            private TreeViewItem CreateEntityGroupItem(EntityGroupInfo group)
-            {
-                return new TreeViewItem { id = _itemCache.Count, depth = 0, displayName = group.ToString() };
-            }
-
-            /// <summary>
-            /// Creates the entity item using the specified entity
-            /// </summary>
-            /// <param name="entity">The entity</param>
-            /// <returns>The tree view item</returns>
-            private TreeViewItem CreateEntityItem(EntityInfo entity)
-            {
-                return new TreeViewItem { id = _itemCache.Count, depth = 1, displayName = entity.ToString() };
-            }
-
+            /// <param name="treeViewItem">The tree view item</param>
+            /// <param name="search">The search</param>
+            /// <returns>The bool</returns>
             protected override bool DoesItemMatchSearch(TreeViewItem treeViewItem, string search)
             {
-                if (_itemCache[treeViewItem.id] is EntityInfo entity)
-                {
-                    var searchLower = search.ToLower();
-                    foreach (var component in entity.Components)
-                    {
-                        if (component.ComponentName.ToLower().Contains(searchLower))
-                        {
-                            return true;
-                        }
-                    }
-                }
+                // if (_itemCache[treeViewItem.id] is EntityInfo entity)
+                // {
+                //     var searchLower = search.ToLower();
+                //     foreach (var component in entity.Components)
+                //     {
+                //         if (component.ComponentName.ToLower().Contains(searchLower))
+                //         {
+                //             return true;
+                //         }
+                //     }
+                // }
 
                 return false;
             }
