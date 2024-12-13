@@ -1,5 +1,21 @@
 {
   "dependencies": {
+    "com.sebaslab.svelto.common": {
+      "version": "file:com.sebaslab.svelto.common",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "org.nuget.system.runtime.compilerservices.unsafe": "6.0.0"
+      }
+    },
+    "com.sebaslab.svelto.ecs": {
+      "version": "file:com.sebaslab.svelto.ecs",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.sebaslab.svelto.common": "3.5.0"
+      }
+    },
     "com.unity.collab-proxy": {
       "version": "2.3.1",
       "depth": 0,
@@ -134,6 +150,13 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
+    },
+    "org.nuget.system.runtime.compilerservices.unsafe": {
+      "version": "6.0.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",
