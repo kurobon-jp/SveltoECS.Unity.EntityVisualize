@@ -4,11 +4,10 @@ using System.Reflection;
 using Svelto.DataStructures;
 using Svelto.ECS;
 using Svelto.ECS.Internal;
-using SveltoECS.Unity.EntityVisualize.Models;
+using SveltoECS.Unity.EntityVisualize.Editor.Models;
 
 namespace SveltoECS.Unity.EntityVisualize.Editor
 {
-
     /// <summary>
     /// The entity collector class
     /// </summary>

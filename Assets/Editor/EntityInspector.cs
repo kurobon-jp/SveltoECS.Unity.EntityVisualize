@@ -1,6 +1,6 @@
 using System;
 using Svelto.ECS;
-using SveltoECS.Unity.EntityVisualize.Models;
+using SveltoECS.Unity.EntityVisualize.Editor.Models;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;

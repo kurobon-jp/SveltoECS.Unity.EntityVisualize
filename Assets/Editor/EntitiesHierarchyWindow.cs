@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using System.Threading;
+using System.Threading.Tasks;
 using Svelto.ECS;
 using UnityEditor;
 using UnityEditor.UIElements;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace SveltoECS.Unity.EntityVisualize.Editor
@@ -56,14 +55,15 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         {
             _treeView = new TreeView
             {
-                viewDataKey = "tree-view", focusable = true,
+                viewDataKey = "tree-view",
+                focusable = true,
                 makeItem = () =>
                 {
                     var label = new Label();
                     var doubleClickable = new Clickable(() => OnDoubleClick());
                     doubleClickable.activators.Clear();
                     doubleClickable.activators.Add(new ManipulatorActivationFilter
-                        { button = MouseButton.LeftMouse, clickCount = 2 });
+                    { button = MouseButton.LeftMouse, clickCount = 2 });
                     label.AddManipulator(doubleClickable);
                     return label;
                 }
@@ -86,7 +86,7 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         private void OnDoubleClick()
         {
             var inspectorWindowType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
-            var inspectorWindow = EditorWindow.GetWindow(inspectorWindowType);
+            var inspectorWindow = GetWindow(inspectorWindowType);
             inspectorWindow.Focus();
         }
 
@@ -97,7 +97,6 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         private void OnSearchTextChanged(string text)
         {
             _searchText = text;
-            Debug.Log(text);
         }
 
         /// <summary>
@@ -147,7 +146,7 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             _treeView.SetRootItems(_rootItems);
             _treeView.RefreshItems();
             _isRefreshing = true;
-            new Thread(Refresh).Start();
+            Task.Run(Refresh);
         }
 
         /// <summary>
@@ -194,7 +193,7 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         /// <summary>
         /// Shows the window
         /// </summary>
-        [MenuItem("Window/Svelto.ECS/EntitiesHierarchy")]
+        [MenuItem("Window/Svelto.ECS/Entities Hierarchy")]
         public static void ShowWindow()
         {
             GetWindow<EntitiesHierarchyWindow>("Entities Hierarchy");

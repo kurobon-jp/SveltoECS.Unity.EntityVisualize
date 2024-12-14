@@ -1,4 +1,4 @@
-namespace SveltoECS.Unity.EntityVisualize.Models
+namespace SveltoECS.Unity.EntityVisualize.Editor.Models
 {
     /// <summary>
     /// The component info class

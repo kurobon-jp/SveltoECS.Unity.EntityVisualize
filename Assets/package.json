@@ -2,7 +2,7 @@
     "name": "com.kurobon.svelto_ecs_unity_entity_visualize",
     "displayName": "SveltoECS Unity EntityVisualize",
     "version": "1.0.0",
-    "unity": "2021.1",
+    "unity": "2022.1",
     "description": "SveltoECS Unity EntityVisualize",
     "author": {
         "name": "kurobon",

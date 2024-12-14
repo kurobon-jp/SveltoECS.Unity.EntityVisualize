@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Svelto.ECS;
 
-namespace SveltoECS.Unity.EntityVisualize.Models
+namespace SveltoECS.Unity.EntityVisualize.Editor.Models
 {
     /// <summary>
     /// The entity info class
