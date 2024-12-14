@@ -1,3 +1,14 @@
 fileFormatVersion: 2
-guid: 1e94568138424864984fc1770d53f119
-timeCreated: 1733908905
+guid: 7412ffa6d02a64c6e880dadf2423128b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_ViewDataDictionary: {instanceID: 0}
+  - editorLayout: {fileID: 9197481963319205126, guid: 0e7b26ace1aa3417e9c89340b81f7936, type: 3}
+  - labelItemLayout: {fileID: 9197481963319205126, guid: ba6522620a57e48dd845c50bd74991d2, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

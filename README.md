@@ -3,7 +3,7 @@ This library displays a list of structure [Svelto.ECS](https://github.com/sebas7
 *Rewriting values ​​is not supported.
 
 # Requirement
-- Unity 2021.3 higher
+- Unity 2022.1 higher
 
 # Dependency
 - [Svelto.ECS](https://www.nuget.org/packages/Svelto.ECS/)
@@ -29,5 +29,5 @@ public class MainCompositionRoot : ICompositionRoot
 }
 ```
 
-Window -> Svelto.ECS -> EntitiesHierarchy<br>
+Window -> Svelto.ECS -> Entities Hierarchy<br>
 <img width="800" src="./image.png">

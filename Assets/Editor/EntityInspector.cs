@@ -1,4 +1,5 @@
 using System;
+using Svelto.ECS;
 using SveltoECS.Unity.EntityVisualize.Models;
 using UnityEditor;
 using UnityEngine;
@@ -29,19 +30,20 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             }
         }
 
-        /// <summary>
-        /// The entity info
-        /// </summary>
-        private EntityInfo _entityInfo;
+        private EntityCollector _collector;
 
-        /// <summary>
-        /// Binds the entity info
-        /// </summary>
-        /// <param name="entityInfo">The entity info</param>
-        public void Bind(EntityInfo entityInfo)
+        private EGID _egid;
+
+        public void Bind(EntityCollector collector, EGID entityInfo)
         {
-            _entityInfo = entityInfo;
-            Selection.activeObject = entityInfo == null ? null : this;
+            _collector = collector;
+            _egid = entityInfo;
+            Selection.activeObject = entityInfo == default ? null : this;
+        }
+
+        private EntityInfo GetEntityInfo()
+        {
+            return _collector.GetEntityInfo(_egid);
         }
 
         /// <summary>
@@ -56,6 +58,8 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             /// </summary>
             private EntityInspector _inspector;
 
+            private EntityInfo _entityInfo;
+
             /// <summary>
             /// Ons the enable
             /// </summary>
@@ -69,10 +73,11 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             /// </summary>
             protected override void OnHeaderGUI()
             {
+                _entityInfo = _inspector.GetEntityInfo();
                 var style = new GUIStyle(EditorStyles.boldLabel);
                 style.fontSize = 24;
                 style.padding = new RectOffset(8, 8, 8, 8);
-                GUILayout.Label($"{_inspector._entityInfo}", style);
+                GUILayout.Label($"{_entityInfo}", style);
             }
 
             /// <summary>
@@ -81,9 +86,9 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
             public override void OnInspectorGUI()
             {
                 var defaultColor = GUI.backgroundColor;
-                for (var i = 0; i < _inspector._entityInfo.Components.Count; i++)
+                for (var i = 0; i < _entityInfo.Components.Count; i++)
                 {
-                    var componentInfo = _inspector._entityInfo.Components[i];
+                    var componentInfo = _entityInfo.Components[i];
                     var component = componentInfo.Component;
                     GUI.backgroundColor = GetRainbowColor(i);
                     componentInfo.Foldout =

@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using System.Linq;
-using Svelto.DataStructures;
+using System.Threading;
 using Svelto.ECS;
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace SveltoECS.Unity.EntityVisualize.Editor
 {
@@ -12,90 +12,115 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
     /// The entities hierarchy window class
     /// </summary>
     /// <seealso cref="EditorWindow"/>
-    public class EntitiesHierarchyWindow : EditorWindow
+    public sealed class EntitiesHierarchyWindow : EditorWindow
     {
         /// <summary>
-        /// The tree view state
+        /// The root items
         /// </summary>
-        [SerializeField] private TreeViewState _treeViewState;
+        private readonly List<TreeViewItemData<Item>> _rootItems = new();
 
         /// <summary>
-        /// The tree view
-        /// </summary>
-        private EntitiesTreeView _treeView;
-
-        /// <summary>
-        /// The search field
-        /// </summary>
-        private SearchField _searchField;
-
-        /// <summary>
-        /// The selected index
-        /// </summary>
-        private int _selectedIndex;
-
-        /// <summary>
-        /// The is selected
-        /// </summary>
-        private bool _isSelected;
-
-        /// <summary>
-        /// The ticker
+        /// The collector
         /// </summary>
         private EntityCollector _collector;
 
         /// <summary>
-        /// Opens
+        /// The tree view
         /// </summary>
-        [MenuItem("Window/Svelto.ECS/EntitiesHierarchy")]
-        private static void Open()
-        {
-            GetWindow<EntitiesHierarchyWindow>("EntitiesHierarchy");
-        }
+        private TreeView _treeView;
 
         /// <summary>
-        /// Ons the enable
+        /// The toolbar menu
         /// </summary>
-        private void OnEnable()
-        {
-            _treeViewState ??= new TreeViewState();
-            _treeView = new EntitiesTreeView(_treeViewState);
-            _searchField = new SearchField();
-            _searchField.downOrUpArrowKeyPressed += _treeView.SetFocusAndEnsureSelectedItem;
-        }
+        private ToolbarMenu _toolbarMenu;
 
         /// <summary>
-        /// Ons the gui
+        /// The search field
         /// </summary>
-        void OnGUI()
+        private ToolbarSearchField _searchField;
+
+        /// <summary>
+        /// The search text
+        /// </summary>
+        private string _searchText;
+
+        /// <summary>
+        /// The is refreshing
+        /// </summary>
+        private bool _isRefreshing;
+
+        /// <summary>
+        /// Creates the gui
+        /// </summary>
+        private void CreateGUI()
         {
-            var enginesRoots = EntityVisualizer.EnginesRoots;
-            if (!EditorApplication.isPlaying || enginesRoots.Count == 0) return;
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            _treeView = new TreeView
             {
-                _treeView.searchString = _searchField.OnToolbarGUI(_treeView.searchString, GUILayout.Width(350f));
-                GUILayout.FlexibleSpace();
-                var names = enginesRoots.Keys.ToArray();
-                var indexies = names.Select((x, i) => i).ToArray();
-                var selectedIndex = EditorGUILayout.IntPopup(_selectedIndex, names, indexies, EditorStyles.toolbarPopup,
-                    GUILayout.Width(150f));
-                if (selectedIndex < 0) return;
-                if (selectedIndex != _selectedIndex || _collector == null)
+                viewDataKey = "tree-view", focusable = true,
+                makeItem = () =>
                 {
-                    _collector ??= new EntityCollector();
-                    _treeViewState.selectedIDs = new List<int>();
-                    _treeView.OnEntitySelected(default);
-                    if (enginesRoots.TryGetValue(names[_selectedIndex], out var enginesRoot))
-                    {
-                        _selectedIndex = selectedIndex;
-                        _collector.Bind(enginesRoot);
-                    }
+                    var label = new Label();
+                    var doubleClickable = new Clickable(() => OnDoubleClick());
+                    doubleClickable.activators.Clear();
+                    doubleClickable.activators.Add(new ManipulatorActivationFilter
+                        { button = MouseButton.LeftMouse, clickCount = 2 });
+                    label.AddManipulator(doubleClickable);
+                    return label;
                 }
+            };
+            _treeView.bindItem = (e, i) => e.Q<Label>().text = _treeView.GetItemDataForIndex<Item>(i).name;
+            _treeView.selectionChanged += OnSelectionChanged;
 
-                _treeView.Bind(_collector);
-                _treeView.Reload();
-                _treeView.OnGUI(GetContentArea());
+            var toolbar = new Toolbar();
+            _toolbarMenu = new ToolbarMenu();
+            _toolbarMenu.text = "Engines Root";
+            _toolbarMenu.variant = ToolbarMenu.Variant.Popup;
+            toolbar.Add(_toolbarMenu);
+            _searchField = new ToolbarSearchField();
+            _searchField.RegisterValueChangedCallback(x => OnSearchTextChanged(x.newValue));
+            toolbar.Add(_searchField);
+            rootVisualElement.Add(toolbar);
+            rootVisualElement.Add(_treeView);
+        }
+
+        private void OnDoubleClick()
+        {
+            var inspectorWindowType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+            var inspectorWindow = EditorWindow.GetWindow(inspectorWindowType);
+            inspectorWindow.Focus();
+        }
+
+        /// <summary>
+        /// Ons the search text changed using the specified text
+        /// </summary>
+        /// <param name="text">The text</param>
+        private void OnSearchTextChanged(string text)
+        {
+            _searchText = text;
+            Debug.Log(text);
+        }
+
+        /// <summary>
+        /// Ons the selection changed using the specified selections
+        /// </summary>
+        /// <param name="selections">The selections</param>
+        private void OnSelectionChanged(IEnumerable<object> selections)
+        {
+            foreach (var selection in selections)
+            {
+                if (selection is not Item item) continue;
+                OnEntitySelected(item.egid);
+                break;
             }
+        }
+
+        /// <summary>
+        /// Ons the entity selected using the specified egid
+        /// </summary>
+        /// <param name="egid">The egid</param>
+        private void OnEntitySelected(EGID egid)
+        {
+            EntityInspector.Instance.Bind(_collector, egid);
         }
 
         /// <summary>
@@ -103,145 +128,92 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         /// </summary>
         private void Update()
         {
-            Repaint();
-        }
-
-        /// <summary>
-        /// Gets the content area
-        /// </summary>
-        /// <returns>The rect</returns>
-        private Rect GetContentArea()
-        {
-            var padding = 3f;
-            var height = EditorGUIUtility.singleLineHeight;
-            return new Rect(padding, padding + height, position.width - padding * 2f,
-                position.height - padding * 2f - height);
-        }
-
-        /// <summary>
-        /// The entities tree view class
-        /// </summary>
-        /// <seealso cref="TreeView"/>
-        class EntitiesTreeView : TreeView
-        {
-            /// <summary>
-            /// The collector
-            /// </summary>
-            private EntityCollector _collector;
-
-            /// <summary>
-            /// The engines root
-            /// </summary>
-            private IReadOnlyDictionary<ExclusiveGroupStruct, FasterList<EGID>> _groups;
-
-            /// <summary>
-            /// The item cache
-            /// </summary>
-            private readonly List<object> _itemCache = new();
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="EntitiesTreeView"/> class
-            /// </summary>
-            /// <param name="treeViewState">The tree view state</param>
-            public EntitiesTreeView(TreeViewState treeViewState) : base(treeViewState)
+            if (EntityVisualizer.EnginesRoots.Count == 0) return;
+            if (_collector == null)
             {
-            }
-
-            /// <summary>
-            /// Binds the collector
-            /// </summary>
-            /// <param name="collector">The collector</param>
-            public void Bind(EntityCollector collector)
-            {
-                _collector = collector;
-            }
-
-            /// <summary>
-            /// Selections the changed using the specified selected ids
-            /// </summary>
-            /// <param name="selectedIds">The selected ids</param>
-            protected override void SelectionChanged(IList<int> selectedIds)
-            {
-                foreach (var selectedId in selectedIds)
+                _collector = new EntityCollector();
+                _toolbarMenu.menu.ClearItems();
+                var status = DropdownMenuAction.Status.Checked;
+                foreach (var pair in EntityVisualizer.EnginesRoots)
                 {
-                    if (selectedId >= _itemCache.Count) continue;
-                    var item = _itemCache[selectedId];
-                    if (item is not EGID egid) continue;
-                    OnEntitySelected(egid);
-                    return;
+                    _toolbarMenu.menu.AppendAction(pair.Key, _ => { OnSwitchEnginesRoot(pair.Value); }, status: status);
+                    if (status != DropdownMenuAction.Status.Checked) continue;
+                    OnSwitchEnginesRoot(pair.Value);
+                    status = DropdownMenuAction.Status.Normal;
                 }
             }
 
-            /// <summary>
-            /// Ons the entity selected using the specified egid
-            /// </summary>
-            /// <param name="egid">The egid</param>
-            public void OnEntitySelected(EGID egid)
-            {
-                if (egid == default)
-                {
-                    EntityInspector.Instance.Bind(null);
-                    return;
-                }
+            if (!EditorApplication.isPlaying || _isRefreshing || _collector == null) return;
+            _treeView.SetRootItems(_rootItems);
+            _treeView.RefreshItems();
+            _isRefreshing = true;
+            new Thread(Refresh).Start();
+        }
 
-                var entityInfo = _collector.GetEntityInfo(egid);
-                EntityInspector.Instance.Bind(entityInfo);
-            }
+        /// <summary>
+        /// Ons the switch engines root using the specified engines root
+        /// </summary>
+        /// <param name="enginesRoot">The engines root</param>
+        private void OnSwitchEnginesRoot(EnginesRoot enginesRoot)
+        {
+            _collector.Bind(enginesRoot);
+        }
 
-            /// <summary>
-            /// Builds the root
-            /// </summary>
-            /// <returns>The root</returns>
-            protected override TreeViewItem BuildRoot()
+        /// <summary>
+        /// Refreshes this instance
+        /// </summary>
+        private void Refresh()
+        {
+            _rootItems.Clear();
+            var groups = _collector.CollectGroups();
+            foreach (var group in groups)
             {
-                _groups = _collector.CollectGroups();
-                _itemCache.Clear();
-                var root = new TreeViewItem
+                var items = new List<TreeViewItemData<Item>>(group.Value.Count);
+                foreach (var egid in group.Value)
                 {
-                    id = 0, depth = -1, displayName = "Root",
-                    children = new List<TreeViewItem>()
-                };
-                foreach (var group in _groups)
-                {
-                    var groupItem = new TreeViewItem
-                        { id = _itemCache.Count, depth = 0, displayName = group.Key.ToString() };
-                    _itemCache.Add(group.Key);
-                    foreach (var egid in group.Value)
+                    var entityName = $"{egid.Value}";
+                    if (!string.IsNullOrEmpty(_searchText) && !entityName.Contains(_searchText))
                     {
-                        _itemCache.Add(egid);
-                        groupItem.AddChild(new TreeViewItem
-                            { id = _itemCache.Count, depth = 1, displayName = egid.ToString() });
+                        continue;
                     }
 
-                    root.AddChild(groupItem);
+                    var item = new TreeViewItemData<Item>(entityName.GetHashCode(),
+                        new Item { name = entityName, egid = egid.Value });
+                    items.Add(item);
                 }
 
-                SetupDepthsFromParentsAndChildren(root);
-                return root;
+                var groupName = $"{group.Key}";
+                var rootItem = new TreeViewItemData<Item>(groupName.GetHashCode(),
+                    new Item { name = $"{groupName} entities:{group.Value.Count}" }, items);
+                _rootItems.Add(rootItem);
             }
+
+            _isRefreshing = false;
+        }
+
+        /// <summary>
+        /// Shows the window
+        /// </summary>
+        [MenuItem("Window/Svelto.ECS/EntitiesHierarchy")]
+        public static void ShowWindow()
+        {
+            GetWindow<EntitiesHierarchyWindow>("Entities Hierarchy");
+        }
+
+        /// <summary>
+        /// The item
+        /// </summary>
+        private struct Item
+        {
+            /// <summary>
+            /// The name
+            /// </summary>
+            public string name;
 
             /// <summary>
-            /// Describes whether this instance does item match search
+            /// The egid
             /// </summary>
-            /// <param name="treeViewItem">The tree view item</param>
-            /// <param name="search">The search</param>
-            /// <returns>The bool</returns>
-            protected override bool DoesItemMatchSearch(TreeViewItem treeViewItem, string search)
-            {
-                // if (_itemCache[treeViewItem.id] is EntityInfo entity)
-                // {
-                //     var searchLower = search.ToLower();
-                //     foreach (var component in entity.Components)
-                //     {
-                //         if (component.ComponentName.ToLower().Contains(searchLower))
-                //         {
-                //             return true;
-                //         }
-                //     }
-                // }
-
-                return false;
-            }
+            public EGID egid;
         }
     }
 }

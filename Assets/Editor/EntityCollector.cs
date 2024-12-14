@@ -5,7 +5,6 @@ using Svelto.DataStructures;
 using Svelto.ECS;
 using Svelto.ECS.Internal;
 using SveltoECS.Unity.EntityVisualize.Models;
-using UnityEngine;
 
 namespace SveltoECS.Unity.EntityVisualize.Editor
 {
@@ -35,7 +34,7 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         /// <summary>
         /// The groups
         /// </summary>
-        private readonly Dictionary<ExclusiveGroupStruct, FasterList<EGID>> _groups = new();
+        private readonly Dictionary<ExclusiveGroupStruct, SortedDictionary<uint, EGID>> _groups = new();
 
         /// <summary>
         /// The group entity components db
@@ -57,18 +56,19 @@ namespace SveltoECS.Unity.EntityVisualize.Editor
         /// <summary>
         /// Ticks this instance
         /// </summary>
-        public IReadOnlyDictionary<ExclusiveGroupStruct, FasterList<EGID>> CollectGroups()
+        public IReadOnlyDictionary<ExclusiveGroupStruct, SortedDictionary<uint, EGID>> CollectGroups()
         {
             _groups.Clear();
             foreach (var entityComponents in _groupEntityComponentsDB)
             {
-                var entityIds = new FasterList<EGID>();
+                var entityIds = new SortedDictionary<uint, EGID>();
                 _groups.Add(entityComponents.key, entityIds);
                 foreach (var componentEntry in entityComponents.value)
                 {
                     componentEntry.value.KeysEvaluator(entityId =>
                     {
-                        entityIds.Add(new EGID(entityId, entityComponents.key));
+                        if (entityIds.ContainsKey(entityId)) return;
+                        entityIds.Add(entityId, new EGID(entityId, entityComponents.key));
                     });
                 }
             }
